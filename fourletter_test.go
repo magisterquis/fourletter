@@ -70,7 +70,7 @@ func TestNewEncoding(t *testing.T) {
 	}
 }
 
-func ExampleEncodeToString() {
+func ExampleEncoding_EncodeToString() {
 	enc := MustNewEncoding("boatfeetbowlsoap")
 	s := enc.EncodeToString([]byte("uname -a"))
 	fmt.Printf("%v\n", s)
