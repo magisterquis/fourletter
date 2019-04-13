@@ -1,4 +1,4 @@
-FourLetter
+FourLetter [![GoDoc](https://godoc.org/github.com/magisterquis/fourletter?status.svg)](https://godoc.org/github.com/magisterquis/fourletter)
 ==========
 Encode arbitrary bytes into four-letter words (or cat noises).
 
