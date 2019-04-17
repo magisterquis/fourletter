@@ -63,6 +63,6 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 	}
 
 	/* Send it to the underlying encoder */
-	_, err = e.w.Write(e.buf[:bufi])
-	return bufi / 16, err
+	n, err = e.w.Write(e.buf[:bufi])
+	return n / 16, err
 }
