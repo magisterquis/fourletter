@@ -5,18 +5,23 @@
 // which alert on entropy.
 package fourletter
 
-import (
-	"errors"
-	"fmt"
-)
-
 /*
  * fourletter.go
  * Encode bytes into four-byte words
  * By J. Stuart McMurray
  * Created 20190412
- * Last Modified 20190413
+ * Last Modified 20190416
  */
+
+import (
+	"bytes"
+	"errors"
+	"io"
+	"strings"
+)
+
+/* buflen is the length used for the io.{Read,Write}er buffers*/
+const buflen = 1024
 
 // DefaultEncoding is an encoding using the default cat noises
 var DefaultEncoding = MustNewEncoding("meowmrowpurrmeww")
@@ -24,7 +29,7 @@ var DefaultEncoding = MustNewEncoding("meowmrowpurrmeww")
 // An Encoding is a four-word encoding scheme which encodes each byte as four
 // four-byte words.
 type Encoding struct {
-	ws []string
+	ws [4][4]byte
 }
 
 // NewEncoding returns a new Encoding defined by the given alphabet, which must
@@ -36,13 +41,12 @@ func NewEncoding(encoder string) (*Encoding, error) {
 	}
 
 	var enc Encoding
-	enc.ws = make([]string, 4)
 
 	/* Grab words */
-	enc.ws[0] = encoder[0:4]
-	enc.ws[1] = encoder[4:8]
-	enc.ws[2] = encoder[8:12]
-	enc.ws[3] = encoder[12:16]
+	copy(enc.ws[0][:], encoder[0:4])
+	copy(enc.ws[1][:], encoder[4:8])
+	copy(enc.ws[2][:], encoder[8:12])
+	copy(enc.ws[3][:], encoder[12:16])
 
 	/* Make sure the words are unique */
 	for i := 0; i < 3; i++ {
@@ -78,65 +82,42 @@ func (enc *Encoding) Decode(dst, src []byte) error {
 		return errors.New("destination buffer too small")
 	}
 
-	/* Decode it all */
-	db := -1 /* Current dst byte */
-	for i := 0; i < len(src); i += 4 {
-		/* Move to the next dst byte when we're ready */
-		if 0 == i%16 {
-			db++
-			dst[db] = 0
-		}
-		/* Source word */
-		w := src[i : i+4]
-		var tb byte = 255
-		/* Turn it into two bits. */
-		for j := 0; j < 4; j++ {
-			if string(w) == enc.ws[j] {
-				tb = byte(j)
-				break
-			}
-		}
-		if 255 == tb {
-			return fmt.Errorf("invalid word %q", w)
-		}
-		dst[db] >>= 2
-		dst[db] |= tb << 6
-	}
-
-	return nil
+	return newDecoder(enc, bytes.NewReader(src)).decodeInto(dst)
 }
 
 // DecodeString returns the bytes represented by s.
 func (enc *Encoding) DecodeString(s string) ([]byte, error) {
-	o := make([]byte, len(s)/16)
-	if err := enc.Decode(o, []byte(s)); nil != err {
-		return nil, err
+	if 0 != len(s)%16 {
+		return nil, errors.New("invalid source length")
 	}
-	return o, nil
+
+	dst := make([]byte, len(s)/16)
+
+	return dst, newDecoder(enc, strings.NewReader(s)).decodeInto(dst)
 }
 
 // Encode places an src, encoded, into dst.
 func (enc *Encoding) Encode(dst, src []byte) error {
-	if len(dst) < len(src)*16 {
+	if len(src)*16 > len(dst) {
 		return errors.New("destination buffer too small")
 	}
-	cur := 0
-	for _, v := range src {
-		for i := 0; i < 4; i++ {
-			copy(dst[cur:], []byte(enc.ws[0x03&v]))
-			v >>= 2
-			cur += 4
-		}
-	}
-
-	return nil
+	b := bytes.NewBuffer(dst)
+	_, err := newEncoder(enc, b).Write(src)
+	return err
 }
 
 // EncodeToString returns a string containing src, encoded.
 func (enc *Encoding) EncodeToString(src []byte) string {
-	dst := make([]byte, len(src)*16)
-	if err := enc.Encode(dst, src); nil != err {
+	var b strings.Builder
+	if _, err := newEncoder(enc, &b).Write(src); nil != err {
+		/* Should never happen */
 		panic(err)
 	}
-	return string(dst)
+	return b.String()
+}
+
+// EncodeToWriter writes the encoded form of src to dst.  It stops on the first
+// error returned by dst.Write.
+func (enc *Encoding) EncodeToWriter(dst io.Writer, src []byte) (n int, err error) {
+	return newEncoder(enc, dst).Write(src)
 }

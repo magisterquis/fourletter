@@ -43,6 +43,7 @@ func TestNewEncoding(t *testing.T) {
 			[]byte("ls -lart"),
 			"aaaaddddccccbbbbddddaaaaddddbbbbaaaaaaaaccccaaaabbbbddddccccaaaaaaaaddddccccbbbbbbbbaaaaccccbbbbccccaaaaddddbbbbaaaabbbbddddbbbb",
 		},
+		{[]byte{}, ""},
 	} {
 		/* Make sure encoding works */
 		got := e.EncodeToString(c.have)
