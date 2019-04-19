@@ -9,6 +9,7 @@ package fourletter
  */
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 )
@@ -45,6 +46,18 @@ func TestNewEncoding(t *testing.T) {
 		},
 		{[]byte{}, ""},
 	} {
+		/* Make sure enc.Encode works */
+		egot := make([]byte, 16*len(c.have))
+		e.Encode(egot, c.have)
+		if 0 != bytes.Compare(egot, []byte(c.want)) {
+			t.Fatalf(
+				"Encoding.Encode: have:%02x got:%q want:%q",
+				c.have,
+				egot,
+				c.want,
+			)
+		}
+
 		/* Make sure encoding works */
 		got := e.EncodeToString(c.have)
 		if c.want != got {

@@ -101,7 +101,7 @@ func (enc *Encoding) Encode(dst, src []byte) error {
 	if len(src)*16 > len(dst) {
 		return errors.New("destination buffer too small")
 	}
-	b := bytes.NewBuffer(dst)
+	b := bytes.NewBuffer(dst[:0])
 	_, err := newEncoder(enc, b).Write(src)
 	return err
 }
